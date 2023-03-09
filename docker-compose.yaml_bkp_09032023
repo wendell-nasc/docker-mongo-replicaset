@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  mongo1:
+    container_name: mongo1
+    image: mongo:4.4
+    volumes:
+      - ./scripts/rs-init.sh:/scripts/rs-init.sh
+      - ./scripts/init.js:/scripts/init.js
+      - ./mongo-volume1:/data/db
+    networks:
+      - mongo-network
+    ports:
+      - 27017:27017  
+    expose:
+      - 27017
+    depends_on:
+      - mongo2
+      - mongo3
+    links:
+      - mongo2
+      - mongo3
+    restart: always
+    #environment:
+       #- MONGO_INITDB_ROOT_USERNAME=root
+       #- MONGO_INITDB_DATABASE=admin
+       #- MONGO_INITDB_ROOT_PASSWORD=duda123
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+
+  mongo2:
+    container_name: mongo2
+    image: mongo:4.4
+    networks:
+      - mongo-network
+    ports:
+      - 27018:27017
+    expose:
+      - 27018
+    restart: always
+    #environment:
+       #- MONGO_INITDB_ROOT_USERNAME=root
+       #- MONGO_INITDB_ROOT_PASSWORD=duda123
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+  
+  mongo3:
+    container_name: mongo3
+    image: mongo:4.4
+    networks:
+      - mongo-network
+    ports:
+      - 27019:27017
+    expose:
+      - 27019
+    restart: always
+    #environment:
+       #- MONGO_INITDB_ROOT_USERNAME=root
+       #- MONGO_INITDB_ROOT_PASSWORD=duda123
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "dbrs" ]
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    expose:
+      - 8081
+    environment:
+      #- ME_CONFIG_MONGODB_URL=mongodb://mongo1:27017/?replicaSet=dbrs
+      #- ME_CONFIG_MONGODB_URL=mongodb://mongo1:27017/?readPreference=secondary&directConnection=true&ssl=false
+      - ME_CONFIG_MONGODB_URL=mongodb://mongo1:27017/?readPreference=secondary&directConnection=true&ssl=false&slaveOk=true
+    #environment:
+      #- ME_CONFIG_MONGODB_SERVER=mongo1
+      #- ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      #- ME_CONFIG_MONGODB_ADMINPASSWORD=admin
+      - ME_CONFIG_BASICAUTH_USERNAME=wendell
+      - ME_CONFIG_BASICAUTH_PASSWORD=duda123
+      #- VCAP_APP_HOST=0.0.0.0
+      #- VCAP_APP_PORT=8081
+    networks:
+      - mongo-network
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    links:
+      - mongo1
+      #- mongo2
+      #- mongo3
+
+
+networks:
+  mongo-network:
+    driver: bridge
